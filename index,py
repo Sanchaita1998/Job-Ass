@@ -1,0 +1,107 @@
+import pandas as pd
+from pymongo import MongoClient
+import time
+from openai.error import RateLimitError
+from langchain.llms import OpenAI
+
+
+def load_csv_to_mongodb(csv_file, db_name, collection_name):
+    # Connect to MongoDB
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client[db_name]
+    collection = db[collection_name]
+    
+    # Read CSV file
+    df = pd.read_csv("D:/Job Ass/sample_data.csv")
+    
+    # Convert DataFrame to dictionary format
+    records = df.to_dict(orient='records')
+    
+    # Insert records into MongoDB
+    collection.insert_many(records)
+    print("Data loaded into MongoDB successfully.")
+    print("First 5 rows of the dataset:")
+    print(df.head())
+
+# # Example usage
+load_csv_to_mongodb('data.csv', 'MLdataBase', 'my_collection')
+
+
+
+def generate_query(column_name, condition):
+    model = OpenAI(openai_api_key='your_api_key')  # Replace with your valid API key
+    query_prompt = f"Generate a MongoDB query to find documents where {column_name} {condition}"
+    
+    # Retry logic to handle RateLimitError
+    while True:
+        try:
+            # Generate the query using the OpenAI API
+            query = model.invoke(query_prompt)
+            return query
+        except RateLimitError:
+            print("Rate limit exceeded. Retrying after a brief pause...")
+            time.sleep(60)  # Wait for 60 seconds before retrying
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            break
+
+# Example usage
+query = generate_query('Price', '> 50')
+print("Generated Query:", query)
+
+def execute_query(query, db_name, collection_name):
+    # Connect to MongoDB
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client[db_name]
+    collection = db[collection_name]
+    
+    # Execute the query
+    result = list(collection.find(query))
+    
+    return result
+
+# Example usage
+query = {"Price": {"$gt": 50}}  # Example query
+results = execute_query(query, 'my_database', 'my_collection')
+print("Query Results:", results)
+
+def save_to_csv(data, file_name):
+    df = pd.DataFrame(data)
+    df.to_csv(file_name, index=False)
+    print(f"Data saved to {file_name}")
+
+def display_data(data):
+    df = pd.DataFrame(data)
+    print(df)
+
+# Example usage
+
+save_to_csv(results, 'results.csv')
+display_data(results)
+
+
+def main():
+    csv_file = input("Enter the CSV file name: ")
+    load_csv_to_mongodb(csv_file, 'my_database', 'my_collection')
+
+    column_name = input("Enter the column name: ")
+    condition = input("Enter the condition (e.g., '> 50'): ")
+    query = generate_query(column_name, condition)
+    print("Generated Query:", query)
+    
+    try:
+        results = execute_query(query, 'my_database', 'my_collection')
+        if input("Do you want to display the data? (yes/no): ") == 'yes':
+            display_data(results)
+        elif input("Do you want to save the data? (yes/no): ") == 'yes':
+            save_to_csv(results, 'output.csv')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
