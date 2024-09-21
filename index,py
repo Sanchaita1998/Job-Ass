@@ -1,7 +1,7 @@
 import pandas as pd
 from pymongo import MongoClient
 import time
-from openai.error import RateLimitError
+#from openai.error import RateLimitError
 from langchain.llms import OpenAI
 
 
@@ -38,7 +38,7 @@ def generate_query(column_name, condition):
             # Generate the query using the OpenAI API
             query = model.invoke(query_prompt)
             return query
-        except RateLimitError:
+        # except RateLimitError:
             print("Rate limit exceeded. Retrying after a brief pause...")
             time.sleep(60)  # Wait for 60 seconds before retrying
         except Exception as e:
